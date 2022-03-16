@@ -14,11 +14,12 @@
 #include <iostream>
 #include <string>
 #include "std_msgs/Float32.h"
+#include "std_msgs/Int64.h"
 #include <time.h>
 #include <math.h>
 
 #define MESSAGE_FREQ 1
-#define STOP_DIST 2
+#define STOP_DIST 20
 
 void error(const char *msg) {
     perror(msg);
@@ -58,6 +59,9 @@ int main(int argc, char *argv[]) {
 	Listener listener;
     ros::Subscriber client_sub = nh.subscribe("/client_messages", 1, &Listener::callback, &listener);
     ros::Subscriber dist_sub = nh.subscribe("/dist_messages", 1, &Listener::dist_callback, &listener);
+    ros::Publisher rightTicks_pub = nh.advertise<std_msgs::Int64>("right_ticks", 10);
+    ros::Publisher leftTicks_pub = nh.advertise<std_msgs::Int64>("left_ticks", 10);
+
     int sockfd, portno, n, choice = 1;
     struct sockaddr_in serv_addr, cl_addr;
     struct hostent *server;
@@ -107,6 +111,7 @@ int main(int argc, char *argv[]) {
         }
         int x;
         x = 22 - strlen(buffer);
+        std_msgs::Int64 right_msg; std_msgs::Int64 left_msg;
         if (start)
         {
             n = write(sockfd, buffer, strlen(buffer)+x);
@@ -120,7 +125,6 @@ int main(int argc, char *argv[]) {
             //start = true;
             //path = 2;
         }
-
         if (n < 0)
             error("[client] ERROR writing to socket");
                         
@@ -142,8 +146,10 @@ int main(int argc, char *argv[]) {
             encoder_2_prv = encoder_2;
             encoder_2 = vect.back();
             encoder_1 = vect.at(size-2);
-            //std::cout << "[client] encoder 1: " << encoder_1 << std::endl;
-            //std::cout << "[client] encoder 2: " << encoder_2 << std::endl;
+            //std::cout << "[client] Left  encoder: " << encoder_1 << std::endl;
+            //std::cout << "[client] Right encoder: " << encoder_2 << std::endl;
+            right_msg.data = encoder_2;
+            left_msg.data  = encoder_1;
         }
     
         encoder_1_diff = encoder_1 - encoder_1_prv;
@@ -163,9 +169,9 @@ int main(int argc, char *argv[]) {
 
         std::cout << "[client] Wheel 1 distance is  (m): " << total_distance_1 << std::endl;
         std::cout << "[client] Wheel 2 distance is  (m): " << total_distance_2 << std::endl;
-        std::cout << "[client] Wheel difference is (cm): " << (total_distance_1 - total_distance_2)*100 << std::endl; // TODO: take abs() value for difference
+        //std::cout << "[client] Wheel difference is (cm): " << (total_distance_1 - total_distance_2)*100 << std::endl; // TODO: take abs() value for difference
 
-        std::cout << "[client] listener.s is: " << listener.s << std::endl;
+        //std::cout << "[client] listener.s is: " << listener.s << std::endl;
 
         switch (path)
         {
@@ -188,7 +194,11 @@ int main(int argc, char *argv[]) {
             break;
         }
         
+        leftTicks_pub.publish(left_msg);
+        rightTicks_pub.publish(right_msg);
+
         ros::spinOnce();
+        //loop_rate.sleep();
     }
 	    return 0;
 }
