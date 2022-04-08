@@ -166,3 +166,9 @@ target_link_libraries(client_node
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+## Added for python script ##
+
+catkin_install_python(PROGRAMS src/cmd_to_ticks.py 
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)

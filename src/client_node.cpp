@@ -15,11 +15,12 @@
 #include <string>
 #include "std_msgs/Float32.h"
 #include "std_msgs/Int64.h"
+#include "std_msgs/Int32MultiArray.h"
 #include <time.h>
 #include <math.h>
 
 #define MESSAGE_FREQ 1
-#define STOP_DIST 20
+#define STOP_DIST 10
 
 void error(const char *msg) {
     perror(msg);
@@ -31,6 +32,7 @@ private:
     char topic_message[256] = { 0 };
 public:
     void callback(const std_msgs::String::ConstPtr& msg);
+    void motor_callback(const std_msgs::String::ConstPtr& msg);
     void dist_callback(const std_msgs::Float32::ConstPtr& msg);
     char* getMessageValue();
     float diameter, s;
@@ -41,6 +43,11 @@ void Listener::callback(const std_msgs::String::ConstPtr& msg) {
     strcpy(topic_message, msg->data.c_str());
     ROS_INFO("[client] I heard:[%s]", msg->data.c_str());
 }
+
+void Listener::motor_callback(const std_msgs::String::ConstPtr& str_msg) {
+    printf("##########################\n");
+}
+
 
 void Listener::dist_callback(const std_msgs::Float32::ConstPtr& angle) {
     float theta; 
@@ -59,8 +66,11 @@ int main(int argc, char *argv[]) {
 	Listener listener;
     ros::Subscriber client_sub = nh.subscribe("/client_messages", 1, &Listener::callback, &listener);
     ros::Subscriber dist_sub = nh.subscribe("/dist_messages", 1, &Listener::dist_callback, &listener);
+    ros::Subscriber cmd_motor_sub = nh.subscribe("/cmd_motor", 1, &Listener::motor_callback, &listener);
     ros::Publisher rightTicks_pub = nh.advertise<std_msgs::Int64>("right_ticks", 10);
     ros::Publisher leftTicks_pub = nh.advertise<std_msgs::Int64>("left_ticks", 10);
+
+    ros::Publisher encoderTicks_pub = nh.advertise<std_msgs::Int32MultiArray>("encoder_ticks", 10);
 
     int sockfd, portno, n, choice = 1;
     struct sockaddr_in serv_addr, cl_addr;
@@ -112,6 +122,7 @@ int main(int argc, char *argv[]) {
         int x;
         x = 22 - strlen(buffer);
         std_msgs::Int64 right_msg; std_msgs::Int64 left_msg;
+        std_msgs::Int32MultiArray enc_msgs;
         if (start)
         {
             n = write(sockfd, buffer, strlen(buffer)+x);
@@ -150,6 +161,8 @@ int main(int argc, char *argv[]) {
             //std::cout << "[client] Right encoder: " << encoder_2 << std::endl;
             right_msg.data = encoder_2;
             left_msg.data  = encoder_1;
+            enc_msgs.data.push_back(encoder_2);
+            enc_msgs.data.push_back(encoder_1);
         }
     
         encoder_1_diff = encoder_1 - encoder_1_prv;
@@ -196,8 +209,11 @@ int main(int argc, char *argv[]) {
         
         leftTicks_pub.publish(left_msg);
         rightTicks_pub.publish(right_msg);
+        encoderTicks_pub.publish(enc_msgs);
 
         ros::spinOnce();
+
+        enc_msgs.data.clear();
         //loop_rate.sleep();
     }
 	    return 0;
