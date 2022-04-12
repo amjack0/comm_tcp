@@ -22,14 +22,18 @@ velRightWheel = 0
 cmd_motor_pub = rospy.Publisher("cmd_motor", String, queue_size = 1)
 
 def calc_pwm(msg):
-    #rospy.loginfo("[CMD_to_TICKS] Linear Components: [%f, %f, %f]"%(msg.linear.x, msg.linear.y, msg.linear.z))
-    #rospy.loginfo("[CMD_to_TICKS] Angular Components: [%f, %f, %f]"%(msg.angular.x, msg.angular.y, msg.angular.z))
-
+    
     # Calculate the PWM value given the desired velocity 
-    pwmLeftReq = K_P * msg.linear.x + b
-    pwmRightReq = K_P * msg.linear.x + b
+
+    pwmLeftReq = K_P * abs(msg.linear.x) + b
+    pwmRightReq = K_P * abs(msg.linear.x) + b
+
+    if(msg.linear.x < 0):
+        pwmLeftReq = -1 * pwmLeftReq
+        pwmRightReq = -1 * pwmRightReq
 
     # Calculate the PWM value given the angular velocity
+
     wheelVel = rotation_radius * abs(msg.angular.z)
     PWM_TURN = K_P * wheelVel + b
     #print('[CMD_to_TICKS] pwmAngular: ', PWM_TURN)
@@ -69,17 +73,6 @@ def calc_pwm(msg):
     if (abs(pwmRightReq) < PWM_MIN):
         pwmRightReq = 0
 
-    # TODO: When 64.94 then it should be 65 and NOT 64
-    #if(pwmRightReq > 0):
-    #    pwmRightReq = math.ceil(pwmRightReq) # 64.5 : 65
-    #if(pwmRightReq < 0):
-    #    pwmRightReq = math.floor(pwmRightReq) # -64.5 : -65
-
-    #if(pwmLeftReq > 0):
-    #    pwmLeftReq = math.ceil(pwmLeftReq)
-    #if(pwmLeftReq < 0):
-    #    pwmLeftReq = math.floor(pwmLeftReq)
-
     pwmRightReq = int(pwmRightReq)
     pwmLeftReq = int(pwmLeftReq)
     print('[CMD_to_TICKS] pwmRightReq: ', pwmRightReq)
@@ -95,7 +88,6 @@ def listener():
 
     rospy.Subscriber("/cmd_vel", Twist, calc_pwm)
 
-    # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()
 
 if __name__ == '__main__':
