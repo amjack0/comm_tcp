@@ -20,7 +20,7 @@
 #include <math.h>
 
 #define MESSAGE_FREQ 1
-#define STOP_DIST 10
+#define STOP_DIST 100
 
 void error(const char *msg) {
     perror(msg);
@@ -32,7 +32,6 @@ private:
     char topic_message[256] = { 0 };
 public:
     void callback(const std_msgs::String::ConstPtr& msg);
-    void motor_callback(const std_msgs::String::ConstPtr& msg);
     void dist_callback(const std_msgs::Float32::ConstPtr& msg);
     char* getMessageValue();
     float diameter, s;
@@ -43,11 +42,6 @@ void Listener::callback(const std_msgs::String::ConstPtr& msg) {
     strcpy(topic_message, msg->data.c_str());
     ROS_INFO("[client] I heard:[%s]", msg->data.c_str());
 }
-
-void Listener::motor_callback(const std_msgs::String::ConstPtr& str_msg) {
-    printf("##########################\n");
-}
-
 
 void Listener::dist_callback(const std_msgs::Float32::ConstPtr& angle) {
     float theta; 
@@ -64,9 +58,8 @@ int main(int argc, char *argv[]) {
 	ros::NodeHandle nh;
     ros::Rate loop_rate(MESSAGE_FREQ); // set the rate as defined in the macro MESSAGE_FREQ
 	Listener listener;
-    ros::Subscriber client_sub = nh.subscribe("/client_messages", 1, &Listener::callback, &listener);
+    ros::Subscriber client_sub = nh.subscribe("/cmd_motor", 1, &Listener::callback, &listener); //client_messages
     ros::Subscriber dist_sub = nh.subscribe("/dist_messages", 1, &Listener::dist_callback, &listener);
-    ros::Subscriber cmd_motor_sub = nh.subscribe("/cmd_motor", 1, &Listener::motor_callback, &listener);
     ros::Publisher rightTicks_pub = nh.advertise<std_msgs::Int64>("right_ticks", 10);
     ros::Publisher leftTicks_pub = nh.advertise<std_msgs::Int64>("left_ticks", 10);
 
