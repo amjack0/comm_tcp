@@ -7,9 +7,12 @@ from std_msgs.msg import Int32MultiArray
 
 K_P = 2205
 b = 1
-# Turning PWM output (10 = min, 50 = max for PWM values)
+# Initial Turning PWM output
 PWM_TURN = 5
-PWM_MIN = 5
+# min and max PWM output
+PWM_MAX = 1100 # For velocity of 0.49 m/sec for safety
+PWM_MIN = 5 
+
 rotation_radius = 0.274 # The distance from the center to the wheel in meters
 # wheel_diameter: 0.153932
 
@@ -20,6 +23,7 @@ velLeftWheel = 0
 velRightWheel = 0
 
 cmd_motor_pub = rospy.Publisher("cmd_motor", String, queue_size = 1)
+cmd_vel_pub = rospy.Publisher("cmd_vel_gui", Twist, queue_size = 1)
 
 def calc_pwm(msg):
     
@@ -66,12 +70,14 @@ def calc_pwm(msg):
         #pwmLeftReq -= (int)(avgDifference * DRIFT_MULTIPLIER)
         #pwmRightReq += (int)(avgDifference * DRIFT_MULTIPLIER)
 
-    # Handle low PWM values
-    if (abs(pwmLeftReq) < PWM_MIN):
+    # Handle low and Hight PWM values
+    if (abs(pwmLeftReq) < PWM_MIN or abs(pwmLeftReq) > PWM_MAX):
         pwmLeftReq = 0
-    
-    if (abs(pwmRightReq) < PWM_MIN):
+        rospy.loginfo("[CMD_to_TICKS] Left PWM data out of limits ! ")
+
+    if (abs(pwmRightReq) < PWM_MIN or abs(pwmRightReq) > PWM_MAX):
         pwmRightReq = 0
+        rospy.loginfo("[CMD_to_TICKS] Right PWM data out of limits ! ")
 
     pwmRightReq = int(pwmRightReq)
     pwmLeftReq = int(pwmLeftReq)
@@ -80,6 +86,11 @@ def calc_pwm(msg):
     str_msg = String()
     str_msg.data = 'GO;' + str(pwmLeftReq) + ';' + str(pwmRightReq)
     cmd_motor_pub.publish(str_msg)
+    
+    # publish the same cmd_vel for ROS Mobile gui
+    cmd_vel_msg = Twist()
+    cmd_vel_msg = msg
+    cmd_vel_pub.publish(cmd_vel_msg)
 
     
 def listener():

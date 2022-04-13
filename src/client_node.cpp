@@ -19,9 +19,6 @@
 #include <time.h>
 #include <math.h>
 
-#define MESSAGE_FREQ 1
-#define STOP_DIST 100
-
 void error(const char *msg) {
     perror(msg);
     exit(0);
@@ -32,21 +29,13 @@ private:
     char topic_message[256] = { 0 };
 public:
     void callback(const std_msgs::String::ConstPtr& msg);
-    void dist_callback(const std_msgs::Float32::ConstPtr& msg);
     char* getMessageValue();
-    float diameter, s;
 };
 
 void Listener::callback(const std_msgs::String::ConstPtr& msg) {
     memset(topic_message, 0, 256);
     strcpy(topic_message, msg->data.c_str());
     ROS_INFO("[client] I heard:[%s]", msg->data.c_str());
-}
-
-void Listener::dist_callback(const std_msgs::Float32::ConstPtr& angle) {
-    float theta; 
-    theta = angle->data; // angle in degree you want the robmobile to travel
-    s = (diameter * theta * M_PI)/180; //length of an arc travel to rotate theta degree
 }
 
 char* Listener::getMessageValue() {
@@ -56,13 +45,11 @@ char* Listener::getMessageValue() {
 int main(int argc, char *argv[]) {
 	ros::init(argc, argv, "client_node");
 	ros::NodeHandle nh;
-    ros::Rate loop_rate(MESSAGE_FREQ); // set the rate as defined in the macro MESSAGE_FREQ
+    ros::Rate loop_rate(1); // set the rate as defined in the macro MESSAGE_FREQ
 	Listener listener;
     ros::Subscriber client_sub = nh.subscribe("/cmd_motor", 1, &Listener::callback, &listener); //client_messages
-    ros::Subscriber dist_sub = nh.subscribe("/dist_messages", 1, &Listener::dist_callback, &listener);
     ros::Publisher rightTicks_pub = nh.advertise<std_msgs::Int64>("right_ticks", 10);
     ros::Publisher leftTicks_pub = nh.advertise<std_msgs::Int64>("left_ticks", 10);
-
     ros::Publisher encoderTicks_pub = nh.advertise<std_msgs::Int32MultiArray>("encoder_ticks", 10);
 
     int sockfd, portno, n, choice = 1;
@@ -98,9 +85,6 @@ int main(int argc, char *argv[]) {
     encoder_1 = encoder_2 = encoder_1_prv = encoder_2_prv = counter = 0;
     float total_distance_1,total_distance_2, distance_1, distance_2;
     total_distance_1 = total_distance_2 = 0;
-    listener.diameter = 0.696;
-    bool start = true;
-    int path; path = 1;
 
     while(ros::ok()){
 
@@ -116,24 +100,13 @@ int main(int argc, char *argv[]) {
         x = 22 - strlen(buffer);
         std_msgs::Int64 right_msg; std_msgs::Int64 left_msg;
         std_msgs::Int32MultiArray enc_msgs;
-        if (start)
-        {
-            n = write(sockfd, buffer, strlen(buffer)+x);
-        }
-        else if (!start)
-        {
-            n = write(sockfd, "GO;0;0", 6);
-            std::cout << "[client] #### stoping the robot ####" << std::endl;
-            //Reset the total distance's
-            //total_distance_1 = total_distance_2 = 0;
-            //start = true;
-            //path = 2;
-        }
+        
+        n = write(sockfd, buffer, strlen(buffer)+x);
+
         if (n < 0)
             error("[client] ERROR writing to socket");
                         
         if (echoMode) {
-            printf("##########################\n");
             n = read(sockfd, buffer, strlen(buffer)+x);
             if (n < 0)
                 error("\n[client] ERROR reading reply");
@@ -176,29 +149,6 @@ int main(int argc, char *argv[]) {
         std::cout << "[client] Wheel 1 distance is  (m): " << total_distance_1 << std::endl;
         std::cout << "[client] Wheel 2 distance is  (m): " << total_distance_2 << std::endl;
         //std::cout << "[client] Wheel difference is (cm): " << (total_distance_1 - total_distance_2)*100 << std::endl; // TODO: take abs() value for difference
-
-        //std::cout << "[client] listener.s is: " << listener.s << std::endl;
-
-        switch (path)
-        {
-        case 1:
-            /* move the robmobile in a straight line */
-            if (abs(total_distance_1) >= STOP_DIST)
-            {
-                start = false;
-            }
-            break;
-        case 2:
-            /* move the robmobile in a rotation */
-            if (abs(total_distance_1) >= listener.s)
-            {
-                start = false;
-            }
-            break;
-        
-        default:
-            break;
-        }
         
         leftTicks_pub.publish(left_msg);
         rightTicks_pub.publish(right_msg);
