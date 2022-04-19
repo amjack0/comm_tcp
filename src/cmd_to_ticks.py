@@ -13,7 +13,7 @@ PWM_TURN = 5
 PWM_MAX = 1100 # For velocity of 0.49 m/sec for safety
 PWM_MIN = 5 
 
-rotation_radius = 0.274 # The distance from the center to the wheel in meters
+rotation_radius = 0.2962 # The distance from the center to the wheel in meters
 # wheel_diameter: 0.153932
 
 # Correction multiplier for drift. Chosen through experimentation TODO
@@ -29,12 +29,13 @@ def calc_pwm(msg):
     
     # Calculate the PWM value given the desired velocity 
 
-    pwmLeftReq = K_P * abs(msg.linear.x) + b
-    pwmRightReq = K_P * abs(msg.linear.x) + b
+    pwmLeft = K_P * abs(msg.linear.x) + b
+    pwmRight = K_P * abs(msg.linear.x) + b
 
+    # Take care of the correct direction of rotation
     if(msg.linear.x < 0):
-        pwmLeftReq = -1 * pwmLeftReq
-        pwmRightReq = -1 * pwmRightReq
+        pwmLeft = -1 * pwmLeft
+        pwmRight = -1 * pwmRight
 
     # Calculate the PWM value given the angular velocity
 
@@ -43,18 +44,18 @@ def calc_pwm(msg):
     #print('[CMD_to_TICKS] pwmAngular: ', PWM_TURN)
 
     # Check if we need to turn 
-    if (msg.angular.z != 0.0):
+    if (abs(msg.angular.z) > abs(msg.linear.x)):  # Turn, if rotation > linear: published from ROS Mobile GUI
 
-        # Turn left
+        # Turn left if z is positive
         if (msg.angular.z > 0.0):
-            print('[CMD_to_TICKS] Turning left..')
-            pwmLeftReq = -PWM_TURN
-            pwmRightReq = PWM_TURN
-        # Turn right    
+            print('[CMD_to_TICKS] TURNING LEFT..')
+            pwmLeft = -PWM_TURN
+            pwmRight = PWM_TURN
+        # Turn right if z is negative   
         else:
-            print('[CMD_to_TICKS] Turning right..')
-            pwmLeftReq = PWM_TURN
-            pwmRightReq = -PWM_TURN
+            print('[CMD_to_TICKS] TURNING RIGHT..')
+            pwmLeft = PWM_TURN
+            pwmRight = -PWM_TURN
             
     # Go straight
     else:
@@ -67,30 +68,37 @@ def calc_pwm(msg):
         prevDiff = currDifference
 
         # Correct PWM values of both wheels to make the vehicle go straight
-        #pwmLeftReq -= (int)(avgDifference * DRIFT_MULTIPLIER)
-        #pwmRightReq += (int)(avgDifference * DRIFT_MULTIPLIER)
+        #pwmLeft -= (int)(avgDifference * DRIFT_MULTIPLIER)
+        #pwmRight += (int)(avgDifference * DRIFT_MULTIPLIER)
 
     # Handle low and Hight PWM values
-    if (abs(pwmLeftReq) < PWM_MIN or abs(pwmLeftReq) > PWM_MAX):
-        pwmLeftReq = 0
-        rospy.loginfo("[CMD_to_TICKS] Left PWM data out of limits ! ")
+    if (abs(pwmLeft) < PWM_MIN or abs(pwmRight) < PWM_MIN):
+        pwmLeft = 0
+        pwmRight = 0
+        rospy.loginfo("[CMD_to_TICKS] PWM data is less than minimum limit ! ")
 
-    if (abs(pwmRightReq) < PWM_MIN or abs(pwmRightReq) > PWM_MAX):
-        pwmRightReq = 0
-        rospy.loginfo("[CMD_to_TICKS] Right PWM data out of limits ! ")
+    if (abs(pwmLeft) > PWM_MAX or abs(pwmRight) > PWM_MAX):
+        pwmRight = 0
+        pwmLeft = 0
+        rospy.loginfo("[CMD_to_TICKS] PWM data exceeds the maximum limit ! ")
 
-    pwmRightReq = int(pwmRightReq)
-    pwmLeftReq = int(pwmLeftReq)
-    print('[CMD_to_TICKS] pwmRightReq: ', pwmRightReq)
-    print('[CMD_to_TICKS] pwmLefttReq: ', pwmLeftReq)    
+    pwmRight = int(pwmRight)
+    pwmLeft = int(pwmLeft)
+    print('[CMD_to_TICKS] pwmRight: ', pwmRight)
+    print('[CMD_to_TICKS] pwmLeft: ', pwmLeft)    
     str_msg = String()
-    str_msg.data = 'GO;' + str(pwmLeftReq) + ';' + str(pwmRightReq)
+    str_msg.data = 'GO;' + str(pwmLeft) + ';' + str(pwmRight)
     cmd_motor_pub.publish(str_msg)
     
-    # publish the same cmd_vel for ROS Mobile gui
-    cmd_vel_msg = Twist()
-    cmd_vel_msg = msg
-    cmd_vel_pub.publish(cmd_vel_msg)
+    # publish the same cmd_vel for ROS Mobile GUI for visualisation
+    cmd_vel_gui = Twist()
+
+    #if (abs(msg.linear.x) > abs(msg.angular.z)):
+    #    cmd_vel_gui.linear.x = msg.linear.x
+    #    cmd_vel_gui.angular.z = 0
+
+    cmd_vel_gui = msg
+    cmd_vel_pub.publish(cmd_vel_gui)
 
     
 def listener():
