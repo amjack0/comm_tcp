@@ -86,17 +86,12 @@ def calc_pwm(msg):
     pwmLeft = int(pwmLeft)
     print('[CMD_to_TICKS] pwmRight: ', pwmRight)
     print('[CMD_to_TICKS] pwmLeft: ', pwmLeft)    
-    str_msg = String()
-    str_msg.data = 'GO;' + str(pwmLeft) + ';' + str(pwmRight)
-    cmd_motor_pub.publish(str_msg)
+    motor_msg = String()
+    motor_msg.data = 'GO;' + str(pwmLeft) + ';' + str(pwmRight)
+    cmd_motor_pub.publish(motor_msg)
     
     # publish the same cmd_vel for ROS Mobile GUI for visualisation
     cmd_vel_gui = Twist()
-
-    #if (abs(msg.linear.x) > abs(msg.angular.z)):
-    #    cmd_vel_gui.linear.x = msg.linear.x
-    #    cmd_vel_gui.angular.z = 0
-
     cmd_vel_gui = msg
     cmd_vel_pub.publish(cmd_vel_gui)
 
