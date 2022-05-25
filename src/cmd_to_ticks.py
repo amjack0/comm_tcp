@@ -84,11 +84,12 @@ def calc_pwm(msg):
 
     pwmRight = int(pwmRight)
     pwmLeft = int(pwmLeft)
-    print('[CMD_to_TICKS] pwmRight: ', pwmRight)
-    print('[CMD_to_TICKS] pwmLeft: ', pwmLeft)    
+    #print('[CMD_to_TICKS] pwmRight: ', pwmRight)
+    #print('[CMD_to_TICKS] pwmLeft: ', pwmLeft)    
     motor_msg = String()
     motor_msg.data = 'GO;' + str(pwmLeft) + ';' + str(pwmRight)
     cmd_motor_pub.publish(motor_msg)
+    rospy.loginfo('CMD_to_TICKS] Message calculated and published')
     
     # publish the same cmd_vel for ROS Mobile GUI for visualisation
     cmd_vel_gui = Twist()

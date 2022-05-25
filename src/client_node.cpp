@@ -19,6 +19,8 @@
 #include <time.h>
 #include <math.h>
 
+#define MESSAGE_FREQ 1
+
 void error(const char *msg) {
     perror(msg);
     exit(0);
@@ -45,14 +47,14 @@ char* Listener::getMessageValue() {
 int main(int argc, char *argv[]) {
 	ros::init(argc, argv, "client_node");
 	ros::NodeHandle nh;
-    ros::Rate loop_rate(1); // set the rate as defined in the macro MESSAGE_FREQ
+    ros::Rate loop_rate(MESSAGE_FREQ); // set the rate as defined in the macro MESSAGE_FREQ
 	Listener listener;
     ros::Subscriber client_sub = nh.subscribe("/cmd_motor", 1, &Listener::callback, &listener); //client_messages
     ros::Publisher rightTicks_pub = nh.advertise<std_msgs::Int64>("right_ticks", 10);
     ros::Publisher leftTicks_pub = nh.advertise<std_msgs::Int64>("left_ticks", 10);
     ros::Publisher encoderTicks_pub = nh.advertise<std_msgs::Int32MultiArray>("encoder_ticks", 10);
 
-    int sockfd, portno, n, choice = 1;
+    int sockfd, portno, n, choice = 2;
     struct sockaddr_in serv_addr, cl_addr;
     struct hostent *server;
     char buffer[256];
@@ -78,8 +80,8 @@ int main(int argc, char *argv[]) {
     serv_addr.sin_port = htons(portno);
     if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) 
         error("[client] ERROR connecting");
-    std::cout << "[client] How do you want the client to behave?:\n1. Be able to send messages manually\n2. Subscribe to /client_messages and send whatever's available there\nYour choice:";
-    std::cin >> choice;
+    //std::cout << "[client] How do you want the client to behave?:\n1. Be able to send messages manually\n2. Subscribe to /client_messages and send whatever's available there\nYour choice:";
+    //std::cin >> choice;
 
     int encoder_1, encoder_2, encoder_1_prv, encoder_2_prv, encoder_1_diff, encoder_2_diff, counter;
     encoder_1 = encoder_2 = encoder_1_prv = encoder_2_prv = counter = 0;
@@ -89,19 +91,20 @@ int main(int argc, char *argv[]) {
     while(ros::ok()){
 
         bzero(buffer,256);
-        if (choice == 1) {
-            printf("[client] Please enter the message: ");
-            fgets(buffer,255,stdin);
-        } else if (choice == 2) {
-            strcpy(buffer, listener.getMessageValue());
-            loop_rate.sleep();
-        }
+        //if (choice == 1) {
+        //    printf("[client] Please enter the message: ");
+        //    fgets(buffer,255,stdin);
+        //} else if (choice == 2) {
+        strcpy(buffer, listener.getMessageValue());
+        loop_rate.sleep();
+        //}
         int x;
         x = 22 - strlen(buffer);
         std_msgs::Int64 right_msg; std_msgs::Int64 left_msg;
         std_msgs::Int32MultiArray enc_msgs;
         
         n = write(sockfd, buffer, strlen(buffer)+x);
+        ROS_INFO("[client] Message recieved and written to server");
 
         if (n < 0)
             error("[client] ERROR writing to socket");
@@ -146,8 +149,8 @@ int main(int argc, char *argv[]) {
         total_distance_1 = distance_1 + total_distance_1;
         total_distance_2 = distance_2 + total_distance_2;
 
-        std::cout << "[client] Wheel 1 distance is  (m): " << total_distance_1 << std::endl;
-        std::cout << "[client] Wheel 2 distance is  (m): " << total_distance_2 << std::endl;
+        /*std::cout << "[client] Wheel 1 distance is  (m): " << total_distance_1 << std::endl;
+        std::cout << "[client] Wheel 2 distance is  (m): " << total_distance_2 << std::endl;*/
         //std::cout << "[client] Wheel difference is (cm): " << (total_distance_1 - total_distance_2)*100 << std::endl; // TODO: take abs() value for difference
         
         leftTicks_pub.publish(left_msg);
