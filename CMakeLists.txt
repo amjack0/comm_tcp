@@ -169,6 +169,6 @@ target_link_libraries(client_node
 
 ## Added for python script ##
 
-catkin_install_python(PROGRAMS src/cmd_to_ticks.py 
+catkin_install_python(PROGRAMS src/cmd_to_ticks.py src/control_motor.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
