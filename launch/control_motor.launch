@@ -1,7 +1,7 @@
 <launch>
 
+<node pkg="comm_tcp" name="cmd_to_ticks" type="cmd_to_ticks.py" output="screen"/>
 <node pkg="comm_tcp" name="control_motor" type="control_motor.py" output="screen"/>
-<node pkg="comm_tcp" name="client_node" type="client_node" args="192.168.178.63 12400 e" output="screen"/>
-<!-- OR simply do : rosrun comm_tcp client_node 192.168.178.63 12400 -->
+<node pkg="comm_tcp" name="client_node" type="client_node" args="192.168.178.63 12400 -e" output="screen"/>
 
 </launch>

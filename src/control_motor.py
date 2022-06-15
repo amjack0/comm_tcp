@@ -2,10 +2,10 @@
 import rospy
 from std_msgs.msg import String, Bool
 
-cmd_motor_pub = rospy.Publisher("cmd_motor", String, queue_size = 1)
+cmd_motor_pub = rospy.Publisher("motor_starten", String, queue_size = 1)
 
 pwmLeft = 50
-pwmRight = -50
+pwmRight = 50
 
 def motor_befehl(button_pressed):
 

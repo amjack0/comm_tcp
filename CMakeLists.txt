@@ -105,6 +105,7 @@ include_directories(
 ## Declare a cpp executable
 add_executable(server_node src/server_node.cpp)
 add_executable(client_node src/client_node.cpp)
+add_executable(client_node_batt src/client_node_batt.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -116,6 +117,9 @@ target_link_libraries(server_node
 )
 
 target_link_libraries(client_node
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(client_node_batt
   ${catkin_LIBRARIES}
 )
 

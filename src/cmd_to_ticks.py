@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 import rospy
-import math
 from std_msgs.msg import String
-from geometry_msgs.msg import Twist, Vector3
-from std_msgs.msg import Int32MultiArray
+from geometry_msgs.msg import Twist
+#from sensor_msgs.msg import BatteryState
 
-K_P = 2205
-b = 1
+# slope of the Motor PWM - Velocity (m/sec) curve
+K_P = 1706.4343
+b = 1.470863
 # Initial Turning PWM output
 PWM_TURN = 5
 # min and max PWM output
-PWM_MAX = 1100 # For velocity of 0.49 m/sec for safety
+PWM_MAX = 4000 # 1100 For velocity of 0.49 m/sec for safety (for small tire)
 PWM_MIN = 5 
 
 rotation_radius = 0.2962 # The distance from the center to the wheel in meters
@@ -24,6 +24,7 @@ velRightWheel = 0
 
 cmd_motor_pub = rospy.Publisher("cmd_motor", String, queue_size = 1)
 cmd_vel_pub = rospy.Publisher("cmd_vel_gui", Twist, queue_size = 1)
+#battery_pub = rospy.Publisher("battery", BatteryState, queue_size = 1, latch=True)
 
 def calc_pwm(msg):
     
@@ -48,12 +49,12 @@ def calc_pwm(msg):
 
         # Turn left if z is positive
         if (msg.angular.z > 0.0):
-            print('[CMD_to_TICKS] TURNING LEFT..')
+            rospy.logdebug('[CMD_to_TICKS] TURNING LEFT..')
             pwmLeft = -PWM_TURN
             pwmRight = PWM_TURN
         # Turn right if z is negative   
         else:
-            print('[CMD_to_TICKS] TURNING RIGHT..')
+            rospy.logdebug('[CMD_to_TICKS] TURNING RIGHT..')
             pwmLeft = PWM_TURN
             pwmRight = -PWM_TURN
             
@@ -89,12 +90,32 @@ def calc_pwm(msg):
     motor_msg = String()
     motor_msg.data = 'GO;' + str(pwmLeft) + ';' + str(pwmRight)
     cmd_motor_pub.publish(motor_msg)
-    rospy.loginfo('CMD_to_TICKS] Message calculated and published')
+    #rospy.loginfo('CMD_to_TICKS] Message calculated and published')
     
     # publish the same cmd_vel for ROS Mobile GUI for visualisation
     cmd_vel_gui = Twist()
     cmd_vel_gui = msg
     cmd_vel_pub.publish(cmd_vel_gui)
+
+    ''' 
+    battery_msg = BatteryState()
+    battery_msg.header.stamp = rospy.Time.now()
+    battery_msg.voltage = 50.0
+    battery_msg.current = 1.0
+    battery_msg.charge = 60.0
+    battery_msg.capacity = 100.0
+    battery_msg.design_capacity = 50.0
+    battery_msg.percentage = 0.6
+    #battery_msg.power_supply_health = BatteryState.POWER_SUPPLY_HEALTH_GOOD
+    #battery_msg.power_supply_technology = BatteryState.POWER_SUPPLY_TECHNOLOGY_LION
+    #battery_msg.power_supply_status = BatteryState.POWER_SUPPLY_STATUS_FULL
+    battery_msg.present = True
+    battery_msg.location = ""
+    battery_msg.serial_number = ""
+    battery_msg.temperature = 20.0
+    
+    battery_pub.publish(battery_msg)
+    '''
 
     
 def listener():
