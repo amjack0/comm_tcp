@@ -18,7 +18,8 @@
 #include "std_msgs/Int32MultiArray.h"
 #include <time.h>
 #include <math.h>
-#include <sensor_msgs/BatteryState.h>
+#include <comm_tcp/BatteryState.h>
+//#include <sensor_msgs/BatteryState.h>
 
 #define MESSAGE_FREQ 100
 #define MESSAGE_SIZE 51
@@ -51,7 +52,7 @@ int main(int argc, char *argv[]) {
     ros::Subscriber client_sub = nh.subscribe("/cmd_motor", 1, &Listener::callback, &listener);
     ros::Subscriber client_sub_1 = nh.subscribe("/motor_starten", 1, &Listener::callback, &listener);
     ros::Publisher encoderTicks_pub = nh.advertise<std_msgs::Int32MultiArray>("encoder_ticks", 10);
-    ros::Publisher batteryData_pub = nh.advertise<sensor_msgs::BatteryState>("battery", 10);
+    ros::Publisher batteryData_pub = nh.advertise<comm_tcp::BatteryState>("battery", 1000);
 
     int sockfd, portno, n;
     struct sockaddr_in serv_addr, cl_addr;
@@ -80,9 +81,9 @@ int main(int argc, char *argv[]) {
     if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
         ROS_ERROR_ONCE("[client] ERROR connecting");
 
-    int encoder_1, encoder_2, full_cap, remaining_cap; 
+    int encoder_1, encoder_2; 
+    double full_cap, remaining_cap, current, voltage, percentage_cap; 
     encoder_1 = encoder_2 = 0;
-    float percentage_cap;
 
     while(ros::ok()){
 
@@ -92,8 +93,9 @@ int main(int argc, char *argv[]) {
         int x;
         x = MESSAGE_SIZE - strlen(buffer);
         std_msgs::Int32MultiArray enc_msgs;
-        sensor_msgs::BatteryState batt_msgs;
-        
+        comm_tcp::BatteryState batt_msgs;
+
+        double temp_d;
         n = write(sockfd, buffer, strlen(buffer)+x);
         //ROS_INFO("[client] Message recieved and written to server");
 
@@ -106,49 +108,62 @@ int main(int argc, char *argv[]) {
                 ROS_ERROR_THROTTLE(0.5, "\n[client] ERROR reading reply");
             ROS_INFO("[client] buffer is: %s", buffer);
             // separate the buffer
-            std::istringstream ss(buffer); int result; std::vector<int> vect(16, 0);
+            std::istringstream ss(buffer); int result; std::vector<double> vect(16, 0);
             std::string token;
             while(std::getline(ss, token, ';')) {
                 std::istringstream (token) >> result;  // convert string to integer
-                vect.push_back(result);
+                temp_d = ::atof(token.c_str());        // convert string to double
+                vect.push_back(temp_d);
             }
             int size = vect.size();
-            encoder_1 = vect.at(size-7);
-            encoder_2 = vect.at(size-6); 
-            full_cap = vect.at(size-5);
-            remaining_cap = vect.at(size-4);
+            double encoder_1_d = vect.at(size-7); 
+            double encoder_2_d = vect.at(size-6);
+            encoder_1 = (int)encoder_1_d;
+            encoder_2 = (int)encoder_2_d;
+
+            full_cap = vect.at(size-5);  
+            remaining_cap = vect.at(size-4); 
+            current = vect.at(size-3); 
+            voltage = vect.at(size-2);
+
+            voltage = voltage/1000;  // from mV to V
+            current = current/1000;  // from mA to A
 
             ROS_INFO("[client] Left encoder: %d", encoder_1);
             ROS_INFO("[client] Right encoder: %d", encoder_2);
-            ROS_INFO("[client] Full charge Cap: %d", full_cap);
-            ROS_INFO("[client] Remaining charge Cap: %d", remaining_cap);
+            ROS_INFO("[client] Full charge Cap (mAh): %f", full_cap);
+            ROS_INFO("[client] Remaining charge Cap (mAh): %f", remaining_cap);
+
+            /* Taking care of division by zero */
 
             if (remaining_cap > 0 and full_cap > 0)
             {
-                percentage_cap = (float)remaining_cap / (float)full_cap;
+                percentage_cap = remaining_cap / full_cap;    // (float)remaining_cap / (float)full_cap
             }
-            else{
+            else if (remaining_cap <= 0 and full_cap <= 0)
+            {
                 percentage_cap = 0.0;
             }
-             
+
             ROS_INFO("[client] Percentage: %f", percentage_cap);
-            ROS_INFO("[client] voltage (mV): %d", vect.at(size-2));    
-            ROS_INFO("[client] current (mA): %d", vect.at(size-3));
-            ROS_INFO("[client] Temperature (C): %d", vect.back());
+            ROS_INFO("[client] voltage (mV): %f", voltage);    
+            ROS_INFO("[client] current (mA): %f", current);
+            ROS_INFO("[client] Temperature (C): %f", vect.back());  // %d for int : %f for float/double
             cout << " --------------------- " << endl;
+                 
+            enc_msgs.data.push_back(encoder_2);
+            enc_msgs.data.push_back(encoder_1);
 
             batt_msgs.header.stamp = ros::Time::now();
             batt_msgs.present = true;
             batt_msgs.percentage = percentage_cap;
-            batt_msgs.voltage = vect.at(size-2)/1000; // from mV to V
-            batt_msgs.current = vect.at(size-3)/1000; // from mA to A
-            batt_msgs.temperature = vect.back();
-                 
-            enc_msgs.data.push_back(encoder_2);
-            enc_msgs.data.push_back(encoder_1);
+            batt_msgs.voltage = voltage; 
+            batt_msgs.current = current;
+            batt_msgs.charge = remaining_cap;
+            batt_msgs.capacity = full_cap; // design_capacity        
+            batteryData_pub.publish(batt_msgs);
         }        
 
-        batteryData_pub.publish(batt_msgs);
         encoderTicks_pub.publish(enc_msgs);
 
         ros::spinOnce();

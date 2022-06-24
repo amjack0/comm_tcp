@@ -3,6 +3,7 @@ import rospy
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist
 #from sensor_msgs.msg import BatteryState
+#from comm_tcp.msg import BatteryState
 
 # slope of the Motor PWM - Velocity (m/sec) curve
 K_P = 1706.4343
@@ -97,7 +98,7 @@ def calc_pwm(msg):
     cmd_vel_gui = msg
     cmd_vel_pub.publish(cmd_vel_gui)
 
-    ''' 
+'''
     battery_msg = BatteryState()
     battery_msg.header.stamp = rospy.Time.now()
     battery_msg.voltage = 50.0
@@ -112,10 +113,9 @@ def calc_pwm(msg):
     battery_msg.present = True
     battery_msg.location = ""
     battery_msg.serial_number = ""
-    battery_msg.temperature = 20.0
     
     battery_pub.publish(battery_msg)
-    '''
+'''
 
     
 def listener():
