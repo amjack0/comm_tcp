@@ -18,7 +18,7 @@
 #include "std_msgs/Int32MultiArray.h"
 #include <time.h>
 #include <math.h>
-#include <comm_tcp/BatteryState.h>
+#include <comm_tcp/BatteryStateMelodic.h>
 //#include <sensor_msgs/BatteryState.h>
 
 #define MESSAGE_FREQ 100
@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
     ros::Subscriber client_sub = nh.subscribe("/cmd_motor", 1, &Listener::callback, &listener);
     ros::Subscriber client_sub_1 = nh.subscribe("/motor_starten", 1, &Listener::callback, &listener);
     ros::Publisher encoderTicks_pub = nh.advertise<std_msgs::Int32MultiArray>("encoder_ticks", 10);
-    ros::Publisher batteryData_pub = nh.advertise<comm_tcp::BatteryState>("battery", 1000);
+    ros::Publisher batteryData_pub = nh.advertise<comm_tcp::BatteryStateMelodic>("battery", 1000);
 
     int sockfd, portno, n;
     struct sockaddr_in serv_addr, cl_addr;
@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
         int x;
         x = MESSAGE_SIZE - strlen(buffer);
         std_msgs::Int32MultiArray enc_msgs;
-        comm_tcp::BatteryState batt_msgs;
+        comm_tcp::BatteryStateMelodic batt_msgs;
 
         double temp_d;
         n = write(sockfd, buffer, strlen(buffer)+x);
@@ -129,20 +129,25 @@ int main(int argc, char *argv[]) {
             voltage = voltage/1000;  // from mV to V
             current = current/1000;  // from mA to A
 
-            ROS_INFO("[client] Left encoder: %d", encoder_1);
+            voltage = 50.0;
+            current = 2.0;
+
+            /*ROS_INFO("[client] Left encoder: %d", encoder_1);
             ROS_INFO("[client] Right encoder: %d", encoder_2);
             ROS_INFO("[client] Full charge Cap (mAh): %f", full_cap);
-            ROS_INFO("[client] Remaining charge Cap (mAh): %f", remaining_cap);
+            ROS_INFO("[client] Remaining charge Cap (mAh): %f", remaining_cap);*/
 
             /* Taking care of division by zero */
 
             if (remaining_cap > 0 and full_cap > 0)
             {
                 percentage_cap = remaining_cap / full_cap;    // (float)remaining_cap / (float)full_cap
+                percentage_cap = 0.6;
             }
             else if (remaining_cap <= 0 and full_cap <= 0)
             {
                 percentage_cap = 0.0;
+                percentage_cap = 0.6;
             }
 
             ROS_INFO("[client] Percentage: %f", percentage_cap);

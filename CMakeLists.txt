@@ -48,7 +48,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 add_message_files(
    FILES
-   BatteryState.msg
+   BatteryStateMelodic.msg
  )
 
 ## Generate services in the 'srv' folder
@@ -175,6 +175,6 @@ target_link_libraries(client_node_batt
 
 ## Added for python script ##
 
-catkin_install_python(PROGRAMS src/cmd_to_ticks.py src/control_motor.py
+catkin_install_python(PROGRAMS src/cmd_to_ticks.py src/control_motor.py src/battery_pub_melodic.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

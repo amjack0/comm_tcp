@@ -2,8 +2,6 @@
 import rospy
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist
-#from sensor_msgs.msg import BatteryState
-#from comm_tcp.msg import BatteryState
 
 # slope of the Motor PWM - Velocity (m/sec) curve
 K_P = 1706.4343
@@ -25,7 +23,6 @@ velRightWheel = 0
 
 cmd_motor_pub = rospy.Publisher("cmd_motor", String, queue_size = 1)
 cmd_vel_pub = rospy.Publisher("cmd_vel_gui", Twist, queue_size = 1)
-#battery_pub = rospy.Publisher("battery", BatteryState, queue_size = 1, latch=True)
 
 def calc_pwm(msg):
     
@@ -97,26 +94,6 @@ def calc_pwm(msg):
     cmd_vel_gui = Twist()
     cmd_vel_gui = msg
     cmd_vel_pub.publish(cmd_vel_gui)
-
-'''
-    battery_msg = BatteryState()
-    battery_msg.header.stamp = rospy.Time.now()
-    battery_msg.voltage = 50.0
-    battery_msg.current = 1.0
-    battery_msg.charge = 60.0
-    battery_msg.capacity = 100.0
-    battery_msg.design_capacity = 50.0
-    battery_msg.percentage = 0.6
-    #battery_msg.power_supply_health = BatteryState.POWER_SUPPLY_HEALTH_GOOD
-    #battery_msg.power_supply_technology = BatteryState.POWER_SUPPLY_TECHNOLOGY_LION
-    #battery_msg.power_supply_status = BatteryState.POWER_SUPPLY_STATUS_FULL
-    battery_msg.present = True
-    battery_msg.location = ""
-    battery_msg.serial_number = ""
-    
-    battery_pub.publish(battery_msg)
-'''
-
     
 def listener():
 
