@@ -2,6 +2,8 @@
 import rospy
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist
+from comm_tcp.msg import BatteryStateMelodic
+import math
 
 # slope of the Motor PWM - Velocity (m/sec) curve
 K_P = 1706.4343
@@ -23,6 +25,8 @@ velRightWheel = 0
 
 cmd_motor_pub = rospy.Publisher("cmd_motor", String, queue_size = 1)
 cmd_vel_pub = rospy.Publisher("cmd_vel_gui", Twist, queue_size = 1)
+battery_string_pub = rospy.Publisher("battery_percentage", String, queue_size = 1)
+info_pub = rospy.Publisher("info", String, queue_size = 1)
 
 def calc_pwm(msg):
     
@@ -94,12 +98,33 @@ def calc_pwm(msg):
     cmd_vel_gui = Twist()
     cmd_vel_gui = msg
     cmd_vel_pub.publish(cmd_vel_gui)
-    
+
+def battery_state_to_string(state_msg):
+
+    string_msg = String()
+    info_msg = String()
+
+    percentage = state_msg.percentage*100
+    percentage = math.floor(percentage)
+
+    if(percentage < 20):
+        info_msg.data = 'Batterie ist leer, bitte aufladen.'
+        info_pub.publish(info_msg)
+    elif(percentage >= 20):
+        info_msg.data = 'Batterie ist gut, bitte fahren.'
+        info_pub.publish(info_msg)
+
+    # assign BatteryState msgs = String msgs to display on GUI
+    string_msg.data = str(percentage) + ' %'
+    battery_string_pub.publish(string_msg)
+
+
 def listener():
 
     rospy.init_node('cmd_to_ticks', anonymous=True)
 
     rospy.Subscriber("/cmd_vel", Twist, calc_pwm)
+    rospy.Subscriber("/battery", BatteryStateMelodic, battery_state_to_string)
 
     rospy.spin()
 

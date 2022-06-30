@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
         ROS_ERROR_ONCE("[client] ERROR connecting");
 
     int encoder_1, encoder_2; 
-    double full_cap, remaining_cap, current, voltage, percentage_cap; 
+    double full_cap, remaining_cap, current, voltage, percentage_cap, percent_prev; 
     encoder_1 = encoder_2 = 0;
 
     while(ros::ok()){
@@ -116,7 +116,7 @@ int main(int argc, char *argv[]) {
                 vect.push_back(temp_d);
             }
             int size = vect.size();
-            double encoder_1_d = vect.at(size-7); 
+            double encoder_1_d = vect.at(size-7); // make 7 depend on size of the vector 
             double encoder_2_d = vect.at(size-6);
             encoder_1 = (int)encoder_1_d;
             encoder_2 = (int)encoder_2_d;
@@ -129,9 +129,6 @@ int main(int argc, char *argv[]) {
             voltage = voltage/1000;  // from mV to V
             current = current/1000;  // from mA to A
 
-            voltage = 50.0;
-            current = 2.0;
-
             /*ROS_INFO("[client] Left encoder: %d", encoder_1);
             ROS_INFO("[client] Right encoder: %d", encoder_2);
             ROS_INFO("[client] Full charge Cap (mAh): %f", full_cap);
@@ -142,12 +139,11 @@ int main(int argc, char *argv[]) {
             if (remaining_cap > 0 and full_cap > 0)
             {
                 percentage_cap = remaining_cap / full_cap;    // (float)remaining_cap / (float)full_cap
-                percentage_cap = 0.6;
+                percent_prev = percentage_cap; 
             }
             else if (remaining_cap <= 0 and full_cap <= 0)
             {
                 percentage_cap = 0.0;
-                percentage_cap = 0.6;
             }
 
             ROS_INFO("[client] Percentage: %f", percentage_cap);
@@ -161,7 +157,7 @@ int main(int argc, char *argv[]) {
 
             batt_msgs.header.stamp = ros::Time::now();
             batt_msgs.present = true;
-            batt_msgs.percentage = percentage_cap;
+            batt_msgs.percentage = percent_prev; // percentage_cap
             batt_msgs.voltage = voltage; 
             batt_msgs.current = current;
             batt_msgs.charge = remaining_cap;
